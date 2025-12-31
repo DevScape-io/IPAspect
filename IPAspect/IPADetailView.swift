@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+import AppKit
 
 struct IPADetailView: View {
     let ipa: IPAInfo
@@ -43,9 +44,21 @@ struct IPADetailView: View {
     private var headerSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Image(systemName: "doc.badge.gearshape")
-                    .font(.system(size: 44))
-                    .foregroundStyle(.blue.gradient)
+                // Display app icon if available, otherwise show SF Symbol
+                if let iconData = ipa.appIconData,
+                   let nsImage = NSImage(data: iconData) {
+                    Image(nsImage: nsImage)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 64, height: 64)
+                        .cornerRadius(12)
+                        .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
+                } else {
+                    Image(systemName: "doc.badge.gearshape")
+                        .font(.system(size: 44))
+                        .foregroundStyle(.blue.gradient)
+                        .frame(width: 64, height: 64)
+                }
                 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(ipa.fileName)
@@ -107,7 +120,7 @@ struct IPADetailView: View {
                     )
                     
                     // Progress bar
-                    if let creationDate = ipa.creationDate, !ipa.isExpired {
+                    if let _ = ipa.creationDate, !ipa.isExpired {
                         VStack(alignment: .leading, spacing: 8) {
                             HStack {
                                 Text("Profile Lifetime")
@@ -246,15 +259,24 @@ struct IPADetailView: View {
     }
     
     private var progress: Double {
-        guard let creation = ipa.creationDate,
-              let expiration = ipa.expirationDate else {
+        guard let expiration = ipa.expirationDate else {
             return 0
         }
         
-        let total = expiration.timeIntervalSince(creation)
-        let elapsed = Date().timeIntervalSince(creation)
+        let now = Date()
         
-        return min(max(elapsed / total, 0), 1)
+        // If already expired, show 100%
+        if now >= expiration {
+            return 1.0
+        }
+        
+        // Use a standard 365-day (1 year) reference period for all profiles
+        // This ensures profiles with the same expiration date show the same progress
+        let standardLifetime: TimeInterval = 365 * 24 * 60 * 60 // 1 year in seconds
+        let timeRemaining = expiration.timeIntervalSince(now)
+        let timeConsumed = standardLifetime - timeRemaining
+        
+        return min(max(timeConsumed / standardLifetime, 0), 1)
     }
 }
 

@@ -7,6 +7,7 @@
 
 import Foundation
 import AppKit
+import UniformTypeIdentifiers
 
 struct IPAExporter {
     
@@ -30,13 +31,14 @@ struct IPAExporter {
                 isExpired: ipa.isExpired,
                 daysUntilExpiration: ipa.daysUntilExpiration,
                 provisionedDevicesCount: ipa.provisionedDevices?.count ?? 0,
-                provisionedDevices: ipa.provisionedDevices
+                provisionedDevices: ipa.provisionedDevices,
+                hasAppIcon: ipa.appIconData != nil
             )
         }
         
         guard let jsonData = try? encoder.encode(exportData),
               let jsonString = String(data: jsonData, encoding: .utf8) else {
-            return "{}"
+            return "[]"
         }
         
         return jsonString
@@ -44,7 +46,7 @@ struct IPAExporter {
     
     /// Export IPA analysis results to CSV format
     static func exportToCSV(ipas: [IPAInfo]) -> String {
-        var csv = "File Name,Bundle ID,Team Name,Team ID,Profile Type,Creation Date,Expiration Date,Status,Days Until Expiration,Analyzed Date\n"
+        var csv = "File Name,Bundle ID,Team Name,Team ID,Profile Type,Creation Date,Expiration Date,Status,Days Until Expiration,Has App Icon,Analyzed Date\n"
         
         let dateFormatter = ISO8601DateFormatter()
         
@@ -58,9 +60,10 @@ struct IPAExporter {
             let expirationDate = ipa.expirationDate.map { dateFormatter.string(from: $0) } ?? "N/A"
             let status = ipa.isExpired ? "Expired" : "Valid"
             let daysUntilExpiration = ipa.daysUntilExpiration.map { String($0) } ?? "N/A"
+            let hasAppIcon = ipa.appIconData != nil ? "Yes" : "No"
             let analyzedDate = dateFormatter.string(from: ipa.analyzedDate)
             
-            csv += "\(fileName),\(bundleId),\(teamName),\(teamId),\(profileType),\(creationDate),\(expirationDate),\(status),\(daysUntilExpiration),\(analyzedDate)\n"
+            csv += "\(fileName),\(bundleId),\(teamName),\(teamId),\(profileType),\(creationDate),\(expirationDate),\(status),\(daysUntilExpiration),\(hasAppIcon),\(analyzedDate)\n"
         }
         
         return csv
@@ -72,14 +75,34 @@ struct IPAExporter {
         savePanel.nameFieldStringValue = suggestedFileName
         savePanel.canCreateDirectories = true
         savePanel.isExtensionHidden = false
+        savePanel.showsTagField = true
+        
+        // Set allowed file types based on extension
+        let fileExtension = (suggestedFileName as NSString).pathExtension
+        if !fileExtension.isEmpty {
+            savePanel.allowedContentTypes = [.init(filenameExtension: fileExtension)].compactMap { $0 }
+        }
         
         savePanel.begin { response in
             guard response == .OK, let url = savePanel.url else { return }
             
             do {
                 try content.write(to: url, atomically: true, encoding: .utf8)
+                
+                // Show success notification in Notification Center
+                let notification = NSUserNotification()
+                notification.title = "Export Successful"
+                notification.informativeText = "File saved to \(url.lastPathComponent)"
+                notification.soundName = NSUserNotificationDefaultSoundName
+                NSUserNotificationCenter.default.deliver(notification)
             } catch {
-                print("Failed to save file: \(error)")
+                // Show error alert
+                let alert = NSAlert()
+                alert.messageText = "Export Failed"
+                alert.informativeText = "Failed to save file: \(error.localizedDescription)"
+                alert.alertStyle = .critical
+                alert.addButton(withTitle: "OK")
+                alert.runModal()
             }
         }
     }
@@ -108,4 +131,5 @@ struct ExportedIPA: Codable {
     let daysUntilExpiration: Int?
     let provisionedDevicesCount: Int
     let provisionedDevices: [String]?
+    let hasAppIcon: Bool
 }

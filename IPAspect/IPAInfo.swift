@@ -21,6 +21,7 @@ final class IPAInfo {
     var appBundleIdentifier: String?
     var provisionedDevices: [String]?
     var provisioningType: String?
+    var appIconData: Data?
     
     var isExpired: Bool {
         guard let expiration = expirationDate else { return false }

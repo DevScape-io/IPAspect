@@ -30,8 +30,6 @@ enum IPAAnalyzerError: LocalizedError {
 actor IPAAnalyzer {
     
     func analyzeIPA(at url: URL) async throws -> IPAInfo {
-        let ipaInfo = IPAInfo(fileName: url.lastPathComponent, filePath: url.path)
-        
         // Create temporary directory
         let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
@@ -49,16 +47,28 @@ actor IPAAnalyzer {
         // Parse provisioning profile
         let profileData = try parseProvisioningProfile(at: provisioningProfile)
         
-        // Update IPAInfo with parsed data
-        ipaInfo.expirationDate = profileData.expirationDate
-        ipaInfo.creationDate = profileData.creationDate
-        ipaInfo.teamName = profileData.teamName
-        ipaInfo.teamIdentifier = profileData.teamIdentifier
-        ipaInfo.appBundleIdentifier = profileData.appBundleIdentifier
-        ipaInfo.provisionedDevices = profileData.provisionedDevices
-        ipaInfo.provisioningType = profileData.provisioningType
+        // Extract app icon
+        let iconData = try? extractAppIcon(from: tempDir)
         
-        return ipaInfo
+        // Create IPAInfo on the main actor since it's a SwiftData model
+        let fileName = url.lastPathComponent
+        let filePath = url.path
+        
+        return await MainActor.run {
+            let ipaInfo = IPAInfo(fileName: fileName, filePath: filePath)
+            
+            // Update IPAInfo with parsed data
+            ipaInfo.expirationDate = profileData.expirationDate
+            ipaInfo.creationDate = profileData.creationDate
+            ipaInfo.teamName = profileData.teamName
+            ipaInfo.teamIdentifier = profileData.teamIdentifier
+            ipaInfo.appBundleIdentifier = profileData.appBundleIdentifier
+            ipaInfo.provisionedDevices = profileData.provisionedDevices
+            ipaInfo.provisioningType = profileData.provisioningType
+            ipaInfo.appIconData = iconData
+            
+            return ipaInfo
+        }
     }
     
     private func extractIPA(from url: URL, to destination: URL) async throws {
@@ -160,9 +170,96 @@ actor IPAAnalyzer {
         
         return plistData
     }
+    
+    private func extractAppIcon(from directory: URL) throws -> Data? {
+        // Find the .app bundle
+        let enumerator = FileManager.default.enumerator(at: directory, includingPropertiesForKeys: [.isDirectoryKey])
+        var appBundleURL: URL?
+        
+        while let file = enumerator?.nextObject() as? URL {
+            if file.pathExtension == "app" {
+                appBundleURL = file
+                break
+            }
+        }
+        
+        guard let appBundle = appBundleURL else {
+            return nil
+        }
+        
+        // Try to find the app icon
+        // Look for common icon file names and patterns
+        let iconPatterns = [
+            "AppIcon60x60@2x.png",
+            "AppIcon60x60@3x.png",
+            "AppIcon76x76@2x~ipad.png",
+            "AppIcon83.5x83.5@2x~ipad.png",
+            "Icon-60@2x.png",
+            "Icon-60@3x.png",
+            "Icon@2x.png",
+            "Icon.png"
+        ]
+        
+        // First, try to find the icon from Info.plist
+        let infoPlistURL = appBundle.appendingPathComponent("Info.plist")
+        if let infoPlistData = try? Data(contentsOf: infoPlistURL),
+           let plist = try? PropertyListSerialization.propertyList(from: infoPlistData, format: nil) as? [String: Any] {
+            
+            // Check CFBundleIconFiles or CFBundleIcons
+            if let iconFiles = plist["CFBundleIconFiles"] as? [String], let iconName = iconFiles.first {
+                let iconURL = appBundle.appendingPathComponent(iconName)
+                if let iconData = try? Data(contentsOf: iconURL) {
+                    return iconData
+                }
+                // Try with .png extension
+                let iconURLWithExt = appBundle.appendingPathComponent("\(iconName).png")
+                if let iconData = try? Data(contentsOf: iconURLWithExt) {
+                    return iconData
+                }
+            }
+            
+            // Check CFBundleIcons dictionary for iOS
+            if let icons = plist["CFBundleIcons"] as? [String: Any],
+               let primaryIcon = icons["CFBundlePrimaryIcon"] as? [String: Any],
+               let iconFiles = primaryIcon["CFBundleIconFiles"] as? [String] {
+                // Use the last icon file (usually the largest)
+                for iconName in iconFiles.reversed() {
+                    for scale in ["@3x", "@2x", ""] {
+                        let fileName = "\(iconName)\(scale).png"
+                        let iconURL = appBundle.appendingPathComponent(fileName)
+                        if let iconData = try? Data(contentsOf: iconURL) {
+                            return iconData
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Fallback: search for common icon patterns
+        for pattern in iconPatterns {
+            let iconURL = appBundle.appendingPathComponent(pattern)
+            if let iconData = try? Data(contentsOf: iconURL) {
+                return iconData
+            }
+        }
+        
+        // Last resort: find any PNG file with "Icon" or "AppIcon" in the name
+        if let iconEnumerator = FileManager.default.enumerator(at: appBundle, includingPropertiesForKeys: nil) {
+            while let file = iconEnumerator.nextObject() as? URL {
+                let fileName = file.lastPathComponent.lowercased()
+                if file.pathExtension == "png" && (fileName.contains("icon") || fileName.contains("appicon")) {
+                    if let iconData = try? Data(contentsOf: file) {
+                        return iconData
+                    }
+                }
+            }
+        }
+        
+        return nil
+    }
 }
 
-struct ProvisioningProfileData {
+struct ProvisioningProfileData: Sendable {
     var expirationDate: Date?
     var creationDate: Date?
     var teamName: String?

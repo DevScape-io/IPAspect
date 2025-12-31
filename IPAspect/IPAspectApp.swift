@@ -10,6 +10,8 @@ import SwiftData
 
 @main
 struct IPAspectApp: App {
+    @State private var fileURLToOpen: URL?
+    
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             IPAInfo.self,
@@ -25,7 +27,13 @@ struct IPAspectApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ContentView(fileURLToOpen: $fileURLToOpen)
+                .onOpenURL { url in
+                    // Handle files opened from Finder
+                    if url.pathExtension.lowercased() == "ipa" {
+                        fileURLToOpen = url
+                    }
+                }
         }
         .modelContainer(sharedModelContainer)
         .windowStyle(.automatic)

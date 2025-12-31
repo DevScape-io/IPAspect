@@ -8,10 +8,13 @@
 import SwiftUI
 import SwiftData
 import UniformTypeIdentifiers
+import AppKit
 
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \IPAInfo.analyzedDate, order: .reverse) private var analyzedIPAs: [IPAInfo]
+    
+    @Binding var fileURLToOpen: URL?
     
     @State private var selectedIPA: IPAInfo?
     @State private var isAnalyzing = false
@@ -31,6 +34,12 @@ struct ContentView: View {
         } message: {
             if let errorMessage {
                 Text(errorMessage)
+            }
+        }
+        .onChange(of: fileURLToOpen) { oldValue, newValue in
+            if let url = newValue {
+                analyzeIPA(at: url)
+                fileURLToOpen = nil // Reset after handling
             }
         }
     }
@@ -54,6 +63,14 @@ struct ContentView: View {
             }
             .frame(maxWidth: .infinity)
             .background(.ultraThinMaterial)
+            .dropDestination(for: URL.self) { urls, _ in
+                if let url = urls.first,
+                   url.pathExtension.lowercased() == "ipa" {
+                    analyzeIPA(at: url)
+                    return true
+                }
+                return false
+            }
             
             Divider()
             
@@ -65,10 +82,57 @@ struct ContentView: View {
                     ForEach(analyzedIPAs) { ipa in
                         IPAListRow(ipa: ipa)
                             .tag(ipa)
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                Button(role: .destructive) {
+                                    withAnimation {
+                                        deleteIPA(ipa)
+                                    }
+                                } label: {
+                                    VStack {
+                                        Spacer()
+                                        Image(systemName: "trash.fill")
+                                            .font(.title2)
+                                        Spacer()
+                                    }
+                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                    .contentShape(Rectangle())
+                                }
+                                .tint(.red)
+                            }
+                            .contextMenu {
+                                Button {
+                                    selectedIPA = ipa
+                                } label: {
+                                    Label("View Details", systemImage: "doc.text.magnifyingglass")
+                                }
+                                
+                                Button {
+                                    showInFinder(ipa)
+                                } label: {
+                                    Label("Show in Finder", systemImage: "folder")
+                                }
+                                
+                                Button {
+                                    exportMessage(for: ipa)
+                                } label: {
+                                    Label("Export Message", systemImage: "doc.on.clipboard")
+                                }
+                                
+                                Divider()
+                                
+                                Button(role: .destructive) {
+                                    withAnimation {
+                                        deleteIPA(ipa)
+                                    }
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
                     }
                     .onDelete(perform: deleteIPAs)
                 }
                 .listStyle(.sidebar)
+                .safeAreaPadding(.top, 12)
             }
         }
         .navigationSplitViewColumnWidth(min: 280, ideal: 320)
@@ -197,6 +261,56 @@ struct ContentView: View {
         }
     }
     
+    private func deleteIPA(_ ipa: IPAInfo) {
+        modelContext.delete(ipa)
+        if selectedIPA?.id == ipa.id {
+            selectedIPA = nil
+        }
+    }
+    
+    private func showInFinder(_ ipa: IPAInfo) {
+        let url = URL(fileURLWithPath: ipa.filePath)
+        
+        // Check if the file exists
+        if FileManager.default.fileExists(atPath: ipa.filePath) {
+            NSWorkspace.shared.activateFileViewerSelecting([url])
+        } else {
+            errorMessage = "The IPA file could not be found at: \(ipa.filePath)"
+            showError = true
+        }
+    }
+    
+    private func exportMessage(for ipa: IPAInfo) {
+        let appName = ipa.fileName.replacingOccurrences(of: ".ipa", with: "")
+        let bundleID = ipa.appBundleIdentifier ?? "Unknown Bundle ID"
+        
+        var expirationText: String
+        if let expirationDate = ipa.expirationDate {
+            let formatter = DateFormatter()
+            formatter.dateStyle = .medium
+            formatter.timeStyle = .none
+            expirationText = formatter.string(from: expirationDate)
+            
+            if ipa.isExpired {
+                expirationText += " (Expired)"
+            } else if let days = ipa.daysUntilExpiration {
+                expirationText += " (\(days) days remaining)"
+            }
+        } else {
+            expirationText = "No expiration date"
+        }
+        
+        let message = """
+        App: \(appName)
+        Bundle ID: \(bundleID)
+        Expiration: \(expirationText)
+        """
+        
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(message, forType: .string)
+    }
+    
     private func exportAsJSON() {
         let json = IPAExporter.exportToJSON(ipas: analyzedIPAs)
         let fileName = "ipa-analysis-\(Date().formatted(date: .numeric, time: .omitted)).json"
@@ -214,30 +328,45 @@ struct IPAListRow: View {
     let ipa: IPAInfo
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
+        HStack(spacing: 12) {
+            // App Icon
+            if let iconData = ipa.appIconData, let nsImage = NSImage(data: iconData) {
+                Image(nsImage: nsImage)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 48, height: 48)
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .stroke(Color.primary.opacity(0.1), lineWidth: 0.5)
+                    )
+            } else {
                 Image(systemName: "doc.badge.gearshape")
-                    .foregroundStyle(statusColor)
-                
+                    .font(.system(size: 32))
+                    .foregroundStyle(statusColor.gradient)
+                    .frame(width: 48, height: 48)
+            }
+            
+            VStack(alignment: .leading, spacing: 6) {
                 Text(ipa.fileName)
                     .font(.headline)
                     .lineLimit(1)
-            }
-            
-            if let expirationDate = ipa.expirationDate {
-                HStack(spacing: 4) {
-                    Image(systemName: statusIcon)
-                        .font(.caption2)
-                    
-                    Text(statusText)
-                        .font(.caption)
+                
+                if let expirationDate = ipa.expirationDate {
+                    HStack(spacing: 4) {
+                        Image(systemName: statusIcon)
+                            .font(.caption2)
+                        
+                        Text(statusText)
+                            .font(.caption)
+                    }
+                    .foregroundStyle(statusColor)
                 }
-                .foregroundStyle(statusColor)
+                
+                Text(ipa.analyzedDate, format: .relative(presentation: .named))
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
             }
-            
-            Text(ipa.analyzedDate, format: .relative(presentation: .named))
-                .font(.caption2)
-                .foregroundStyle(.secondary)
         }
         .padding(.vertical, 4)
     }
@@ -274,6 +403,6 @@ struct IPAListRow: View {
 }
 
 #Preview {
-    ContentView()
+    ContentView(fileURLToOpen: .constant(nil))
         .modelContainer(for: IPAInfo.self, inMemory: true)
 }
