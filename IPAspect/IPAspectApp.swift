@@ -12,7 +12,7 @@ import SwiftData
 struct IPAspectApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
-            Item.self,
+            IPAInfo.self,
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
@@ -28,5 +28,16 @@ struct IPAspectApp: App {
             ContentView()
         }
         .modelContainer(sharedModelContainer)
+        .windowStyle(.automatic)
+        .defaultSize(width: 900, height: 650)
+        .commands {
+            CommandGroup(after: .newItem) {
+                Button("Analyze IPA...") {
+                    NSApplication.shared.sendAction(#selector(NSResponder.keyDown(with:)), to: nil, from: nil)
+                }
+                .keyboardShortcut("o", modifiers: .command)
+            }
+        }
     }
 }
+

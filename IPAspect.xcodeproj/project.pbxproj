@@ -29,9 +29,30 @@
 		87CB62722F04E8660005CC27 /* IPAspectUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = IPAspectUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		87EB2B9F2F04EBC500600C84 /* Exceptions for "IPAspect" folder in "IPAspect" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				IPAAnalyzerTests.swift,
+			);
+			target = 87CB62582F04E8650005CC27 /* IPAspect */;
+		};
+		87EB2BA12F04EBCA00600C84 /* Exceptions for "IPAspect" folder in "IPAspectTests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				IPAAnalyzerTests.swift,
+			);
+			target = 87CB62672F04E8660005CC27 /* IPAspectTests */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		87CB625B2F04E8650005CC27 /* IPAspect */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				87EB2B9F2F04EBC500600C84 /* Exceptions for "IPAspect" folder in "IPAspect" target */,
+				87EB2BA12F04EBCA00600C84 /* Exceptions for "IPAspect" folder in "IPAspectTests" target */,
+			);
 			path = IPAspect;
 			sourceTree = "<group>";
 		};
