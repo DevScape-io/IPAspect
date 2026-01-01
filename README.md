@@ -24,15 +24,12 @@ A modern, native macOS application for analyzing iOS App (IPA) files and inspect
 
 ### Main Window
 ![Main Window](Screenshots/main-window.png)
-*TODO: Add screenshot of main window with sidebar and detail view*
 
 ### Detail View with Profile Information
 ![Detail View](Screenshots/detail-view.png)
-*TODO: Add screenshot showing the profile details*
 
 ### Batch Analysis
 ![CLI Output](Screenshots/cli-output.png)
-*TODO: Add screenshot of terminal showing batch analysis*
 
 ## Requirements
 
@@ -569,7 +566,19 @@ open IPAspect.xcodeproj
 
 ## License
 
-[Add your license here - MIT, Apache 2.0, etc.]
+Copyright 2026 DevScape.io LLC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 
 ## Support
 
@@ -596,4 +605,6 @@ Special thanks to the Swift community and Apple's comprehensive documentation.
 ---
 
 **IPAspect** - Inspect Your IPAs with Clarity 🔍
+
+Copyright © 2026 DevScape.io LLC. Licensed under the Apache License, Version 2.0.
 
