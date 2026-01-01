@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		87EB2BBA2F06E1B200600C84 /* QUICKSTART.md in Resources */ = {isa = PBXBuildFile; fileRef = 87EB2BB32F06E1B200600C84 /* QUICKSTART.md */; };
 		87EB2BBB2F06E1B200600C84 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 87EB2BB42F06E1B200600C84 /* README.md */; };
+		87EB2BD42F06E74F00600C84 /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = 87EB2BD32F06E74F00600C84 /* LICENSE */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -35,6 +36,7 @@
 		87EB2BA32F05079D00600C84 /* IPAspect.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = IPAspect.entitlements; sourceTree = "<group>"; };
 		87EB2BB32F06E1B200600C84 /* QUICKSTART.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = QUICKSTART.md; sourceTree = "<group>"; };
 		87EB2BB42F06E1B200600C84 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
+		87EB2BD32F06E74F00600C84 /* LICENSE */ = {isa = PBXFileReference; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -112,6 +114,7 @@
 				87CB626B2F04E8660005CC27 /* IPAspectTests */,
 				87CB62752F04E8660005CC27 /* IPAspectUITests */,
 				87CB625A2F04E8650005CC27 /* Products */,
+				87EB2BD32F06E74F00600C84 /* LICENSE */,
 			);
 			sourceTree = "<group>";
 		};
@@ -245,6 +248,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				87EB2BD42F06E74F00600C84 /* LICENSE in Resources */,
 				87EB2BBA2F06E1B200600C84 /* QUICKSTART.md in Resources */,
 				87EB2BBB2F06E1B200600C84 /* README.md in Resources */,
 			);
