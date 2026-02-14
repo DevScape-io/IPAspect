@@ -539,7 +539,7 @@ Contributions are welcome! Here's how you can help:
 ### Development Setup
 ```bash
 # Clone the repository
-git clone <repository-url>
+git clone https://github.com/DevScape-io/IPAspect
 cd IPAspect
 
 # Open in Xcode
