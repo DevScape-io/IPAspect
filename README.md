@@ -2,9 +2,6 @@
 
 A modern, native macOS application for analyzing iOS App (IPA) files and inspecting their provisioning profile details, expiration dates, and more.
 
-![IPAspect Banner](Screenshots/banner.png)
-*TODO: Add banner screenshot showing the app interface*
-
 ## Features
 
 - 🔍 **Analyze IPA Files**: Drag and drop or select IPA files for instant analysis
